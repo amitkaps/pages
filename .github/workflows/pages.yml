@@ -1,0 +1,35 @@
+name: pages-spike
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "standard (upload-pages-artifact) or tar (hand-made tarball)"
+        required: true
+        default: standard
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - if: inputs.variant == 'standard'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      - if: inputs.variant == 'tar'
+        run: tar --dereference --hard-dereference -cvf "$RUNNER_TEMP/artifact.tar" -C site .
+      - if: inputs.variant == 'tar'
+        uses: actions/upload-artifact@v7
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
+      - id: deployment
+        uses: actions/deploy-pages@v5
